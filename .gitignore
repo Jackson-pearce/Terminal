@@ -1,0 +1,29 @@
+node_modules/
+dist/
+.next/
+.venv/
+__pycache__/
+*.py[cod]
+artifacts/
+
+# Device build output (the native project itself can be version-controlled).
+android/.gradle/
+android/**/build/
+android/local.properties
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+android/capacitor-cordova-android-plugins/
+ios/App/Pods/
+ios/App/build/
+ios/App/App/public/
+.capacitor/
+
+# Private server data, media, keys, and configuration. Never commit these.
+server/data/
+server/keys/
+server/.env
+*.local.json
+.env
+.env.local
+*.log
+.DS_Store
