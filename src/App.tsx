@@ -8,6 +8,8 @@ import { useChat } from './chat/useChat';
 import { LockScreen, PinSetup } from './security/LockScreen';
 import { useLockManager } from './security/useLockManager';
 import { consumeBackPress } from './lib/backButton';
+import { applySupabaseSession } from './supabase/client';
+import { gatewayEnabled } from './lib/auth';
 
 export default function App() {
   const lock = useLockManager();
@@ -51,6 +53,50 @@ export default function App() {
       removeListener?.();
     };
   }, []);
+
+  // Deep link listener for mobile OAuth return (e.g. terminal://auth#access_token=...)
+  useEffect(() => {
+    const handleUrl = (rawUrl: string) => {
+      try {
+        const hashOrQuery = rawUrl.includes('#')
+          ? rawUrl.split('#')[1]
+          : rawUrl.includes('?')
+          ? rawUrl.split('?')[1]
+          : '';
+        if (!hashOrQuery) return;
+        const params = new URLSearchParams(hashOrQuery);
+        const accessToken = params.get('access_token');
+        const refreshToken = params.get('refresh_token') || '';
+        const email = params.get('email');
+        const handle = params.get('handle') || email?.split('@')[0] || '';
+        const name = params.get('name') || handle;
+        if (accessToken && email) {
+          void applySupabaseSession(accessToken, refreshToken).then(() => {
+            setSessionData({
+              token: accessToken,
+              user: { id: email, email, handle, name },
+            });
+          });
+        }
+      } catch {
+        /* invalid url */
+      }
+    };
+
+    handleUrl(window.location.href);
+
+    if (!Capacitor.isNativePlatform()) return;
+    let removeSub: (() => void) | undefined;
+    import('@capacitor/app').then(async ({ App: CapacitorApp }) => {
+      const sub = await CapacitorApp.addListener('appUrlOpen', ({ url }) => {
+        handleUrl(url);
+      });
+      removeSub = () => sub.remove();
+    });
+    return () => {
+      removeSub?.();
+    };
+  }, [setSessionData]);
 
   // Synchronize SessionProvider with active chat session
   useEffect(() => {
@@ -160,11 +206,11 @@ export default function App() {
     );
   }
 
-  // 4. Normal Unlocked Workspace (gated on active Python server)
+  // 4. Normal Unlocked Workspace (gated on active Python server only when not using Vercel)
   return (
     <>
       <ChatView chat={chat} theme={theme} setTheme={setTheme} />
-      {!chat.online && <OfflineScreen chat={chat} />}
+      {!gatewayEnabled && !chat.online && <OfflineScreen chat={chat} />}
     </>
   );
 }

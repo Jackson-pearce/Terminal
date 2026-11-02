@@ -167,6 +167,13 @@ export function useChat(isDuressMode = false) {
   useEffect(() => {
     let live = true;
     async function ping() {
+      if (gatewayEnabled) {
+        if (live) {
+          setOnline(true);
+          setChecking(false);
+        }
+        return;
+      }
       try {
         const ok = await api.checkHealth(server);
         if (live) setOnline(ok);

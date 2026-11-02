@@ -9,6 +9,7 @@ import {
   X,
 } from 'lucide-react';
 import LoginButton, { GoogleMark } from '../auth/LoginButton';
+import { gatewayEnabled, gatewayUrl } from '../lib/auth';
 import { LockScreen } from '../security/LockScreen';
 import { useLockManager } from '../security/useLockManager';
 import type { Chat } from './useChat';
@@ -153,9 +154,9 @@ export function Auth({ chat }: { chat: Chat }) {
       <div className="term-auth-card">
         <header className="term-auth-head">
           <Brand />
-          <span className={`term-server-pill ${chat.online ? 'online' : 'offline'}`}>
+          <span className={`term-server-pill ${gatewayEnabled || chat.online ? 'online' : 'offline'}`}>
             <span className="term-dot" />
-            {chat.checking ? 'Checking server' : chat.online ? 'Server online' : 'Server offline'}
+            {gatewayEnabled ? 'Cloud online' : chat.checking ? 'Checking server' : chat.online ? 'Server online' : 'Server offline'}
           </span>
         </header>
 
@@ -167,8 +168,8 @@ export function Auth({ chat }: { chat: Chat }) {
             </p>
 
             <LoginButton
-              serverUrl={chat.server}
-              disabled={!chat.online || chat.checking}
+              serverUrl={gatewayEnabled ? gatewayUrl : chat.server}
+              disabled={!gatewayEnabled && (!chat.online || chat.checking)}
               onStart={() => setError('')}
             />
 
@@ -287,21 +288,23 @@ export function Auth({ chat }: { chat: Chat }) {
           <div className="term-endpoint-summary">
             <div className="term-endpoint-meta">
               <Server size={14} />
-              <span>{chat.server}</span>
+              <span>{gatewayEnabled ? gatewayUrl : chat.server}</span>
             </div>
-            <button
-              type="button"
-              className="term-link-btn"
-              onClick={() => {
-                setAddress(chat.server);
-                setAddressOpen(!addressOpen);
-              }}
-            >
-              {addressOpen ? <X size={14} /> : 'Endpoint'}
-            </button>
+            {!gatewayEnabled && (
+              <button
+                type="button"
+                className="term-link-btn"
+                onClick={() => {
+                  setAddress(chat.server);
+                  setAddressOpen(!addressOpen);
+                }}
+              >
+                {addressOpen ? <X size={14} /> : 'Endpoint'}
+              </button>
+            )}
           </div>
 
-          {addressOpen && (
+          {!gatewayEnabled && addressOpen && (
             <form
               className="term-endpoint-edit"
               onSubmit={e => {
@@ -328,7 +331,7 @@ export function Auth({ chat }: { chat: Chat }) {
             </form>
           )}
 
-          {!chat.online && !chat.checking && (
+          {!gatewayEnabled && !chat.online && !chat.checking && (
             <div className="term-offline-banner">
               <span>
                 Python server inactive. Run <code>python server/app.py</code>
@@ -339,7 +342,7 @@ export function Auth({ chat }: { chat: Chat }) {
             </div>
           )}
 
-          {nonLocalHttp && (
+          {!gatewayEnabled && nonLocalHttp && (
             <p className="term-warn-text">Remote HTTP detected — use HTTPS outside localhost.</p>
           )}
         </footer>
